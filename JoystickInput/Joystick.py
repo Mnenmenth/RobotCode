@@ -1,6 +1,6 @@
 import pygame, sys
 from pygame import joystick
-from enum import Enum
+import socket
 
 pygame.init()
 joystick.init()
@@ -11,6 +11,9 @@ stick.init()
 print(stick.get_numaxes())
 
 clock = pygame.time.Clock()
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('192.168.1.125', 2222))
 
 #mx and my are motor values (values not between 0 and 1)
 x, y, mx, my = 0, 0, 0, 0
@@ -47,13 +50,6 @@ while True:
 	y1 = round(stick.get_axis(1), 3)
 	mx1 = mx
 	my1 = my
-
-	if y1 > 0 and direction == True:
-		direction = False
-		print('Direction set to reverse\n')
-	elif y < 0 and direction == False:
-		direction = True
-		print('Direction set to forwards\n')
 
 	if x1 != x:# and (x1 >= 0.01 or x1 <= -0.01):
 		if x1 <= -0.01 and x1 >= -1.0:
@@ -94,17 +90,25 @@ while True:
 		if yzero and xzero:
 			#print('X: 0, MX: 0, Y: 0, MY: 0\n')
 			print('Direction: None; Left Side: 0; Right Side: 0\n')
+			s.sendall(b'03 001')
+			s.sendall(b'11 000')
 		else:
 			print('Direction: {}; Left Side: {}; Right Side: {}\n'.format('Forwards' if direction else 'Reverse', left_side, right_side))
-			'''if yzero and not xzero:
-				#print('X: {}, MX: {}, Y: 0, MY: 0\n'.format(x, mx+deadzone))
-				print('Direction: {}; Left Side: {}; Right Side: 0\n'.format('Forwards' if direction else 'Reverse', left_side))
-			if xzero and not yzero:
-				#print('X: 0, MX: 0, Y: {}, MY: {}\n'.format(y, my+deadzone))
-				print('Direction: {}; Left Side: 0; Right Side: {}\n'.format('Forwards' if direction else 'Reverse', right_side))
-			if not yzero and not xzero:
-				#print('X: {}, MX: {}, Y: {}, MY: {}\n'.format(x, mx+deadzone, y, my+deadzone))
-				print('Direction: {}; Left Side: {}; Right Side: {}\n'.format('Forwards' if direction else 'Reverse', left_side, right_side))
-'''
+			s.sendall('03 {}'.format(str(left_side)[:-2].zfill(3)).encode())
+			s.sendall('11 {}'.format(str(right_side)[:-2].zfill(3)).encode())
+
+	if y1 > 0 and direction == True:
+		direction = False
+		print('Direction set to reverse\n')
+		s.sendall(b'02 000')
+		s.sendall(b'10 000')
+	elif y < 0 and direction == False:
+		direction = True
+		print('Direction set to forwards\n')
+		s.sendall(b'02 001')
+		s.sendall(b'10 001')
+
 	for event in pygame.event.get():
-		if event.type == pygame.QUIT: sys.exit()
+		if event.type == pygame.QUIT:
+			s.sendall(b'CLOSE')
+			sys.exit()

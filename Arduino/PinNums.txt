@@ -1,0 +1,6 @@
+Left Motor Speed & Brake = 3 // 0-255
+Left Motor Direction = 2 // 1 = Forward & 0 = Reverse
+Left Motor Current = 6 // 0-1023
+Right Motor Speed & Brake = 11 // 0-255
+Right Motor Direction = 10 // 1 = Forward & 0 = Reverse
+Right Motor Current = 7 // 0-1023
