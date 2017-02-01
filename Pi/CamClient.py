@@ -17,7 +17,7 @@ c = pygame.time.Clock()
 conn = server.makefile('rb')
 while True:
 	img_len = struct.unpack('<L', conn.read(struct.calcsize('<L')))[0]
-
+	print(img_len)
 	#img_stream = BytesIO()
 	#img_stream.write(conn.read(img_len))
 	#img_stream.seek(0)
