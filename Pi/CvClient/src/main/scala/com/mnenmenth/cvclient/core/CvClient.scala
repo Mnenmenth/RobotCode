@@ -4,6 +4,7 @@ import java.awt.{Dimension, Graphics}
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.net.Socket
+import java.util.concurrent.{ExecutorService, Executors}
 import javax.imageio.ImageIO
 import javax.swing.{JFrame, JLabel, JPanel, SwingUtilities}
 
@@ -24,14 +25,11 @@ import scala.collection.mutable
   */
 object CvClient {
 
-  val vidsize = new Dimension(1920, 1080)
+  val vidsize = new Dimension(640, 480)
   val queue: mutable.Queue[BufferedImage] = mutable.Queue[BufferedImage]()
+  val pool: ExecutorService = Executors.newSingleThreadExecutor()
 
   def queueImg(buff: Array[Byte]): Unit = {
-
-  }
-
-  def mat2img(buff: Array[Byte]): Unit = {
     val mat = new Mat(vidsize.height, vidsize.width, CvType.CV_8UC3)
     mat.put(0, 0, buff)
     val matb = new MatOfByte()
@@ -42,6 +40,26 @@ object CvClient {
   def main(args: Array[String]): Unit = {
     Util.extractCv()
 
+    val win = new JFrame()
+    win.setSize(vidsize)
+    var frame = new BufferedImage(vidsize.width, vidsize.height, BufferedImage.TYPE_3BYTE_BGR)
+
+    val panel = new JPanel {
+      override def paint(g: Graphics): Unit = {
+        super.paint(g)
+
+        if (queue.size >= 30)
+          frame = queue.dequeue()
+
+
+        g.drawImage(frame, 0, 0, vidsize.width, vidsize.height, null)
+
+        repaint()
+      }
+    }
+    panel.setSize(vidsize)
+    win.add(panel)
+
     val sock = new Socket("192.168.1.125", 2223)
     val in = sock.getInputStream
 
@@ -49,39 +67,10 @@ object CvClient {
     while(sock.isConnected) {
       val buff = new Array[Byte]((sizeMat.total()*sizeMat.elemSize()).toInt)
       in.read(buff)
-      //mat.put(0,0,buff)
+      pool.submit(new Runnable {
+        override def run(): Unit = queueImg(buff)
+      })
     }
-/*
-    val win = new JFrame()
-    win.setUndecorated(true)
-    win.setSize(vidsize)
-
-    val cap = new VideoCapture
-    cap.open(0)
-    cap.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, vidsize.width)
-    cap.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, vidsize.height)
-
-    while(!cap.isOpened) Thread.sleep(10)
-
-    val frame = new Mat()
-    var bufFrame = new BufferedImage(vidsize.width, vidsize.height, BufferedImage.TYPE_3BYTE_BGR)
-
-    val panel = new JPanel {
-      override def paint(g: Graphics): Unit = {
-        super.paint(g)
-        g.drawImage(bufFrame, 0, 0, vidsize.width, vidsize.height, null)
-        repaint()
-      }
-    }
-    panel.setSize(vidsize)
-    win.add(panel)
-
-    while(frame.empty()) cap.retrieve(frame)
-    win.setVisible(true)
-    while (true) {
-      cap.retrieve(frame)
-      mat2img(frame)
-    }*/
   }
 
 }
